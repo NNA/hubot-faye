@@ -1,6 +1,6 @@
 {
   "name":        "hubot-faye",
-  "version":     "0.0.1",
+  "version":     "0.0.2",
   "author":      "nna",
   "keywords":    "github hubot faye adapter",
   "description": "A faye adapter for hubot",
@@ -15,7 +15,7 @@
     "url": "git://github.com/nna/hubot-faye.git"
   },
   "dependencies": {
-    "hubot": "1.1.11",
+    "hubot": "2.0.4",
     "faye":"0.6.7"
   },
   "devDependencies": {

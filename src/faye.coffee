@@ -15,8 +15,9 @@ class Faye extends Adapter
       path: process.env.HUBOT_FAYE_PATH || 'bayeux'
       user: process.env.HUBOT_FAYE_USER || 'anonymous'
       password: process.env.HUBOT_FAYE_PASSWORD || ''
-      rooms: process.env.HUBOT_FAYE_ROOMS?.split(',') ? ['test_room']
-      extensions_dir: process.env.HUBOT_FAYE_EXTENSIONS_DIR || 'src/adapters/third-party/faye_extensions'
+      avatar: process.env.HUBOT_FAYE_AVATAR || ''
+      rooms: process.env.HUBOT_FAYE_ROOMS?.split(',') ? ['/chat/test_room']
+      extensions_dir: process.env.HUBOT_FAYE_EXTENSIONS_DIR || 'src/adapters/faye_extensions'
     
     if not options.server
       throw Error('You need to set HUBOT_FAYE_SERVER env vars for faye to work')
@@ -32,9 +33,13 @@ class Faye extends Adapter
       console.log "Subscribing to room #{room}"
 
       #subscribe to every rooms
-      @client.subscribe "/chat/#{room}", (message) =>
-        console.log 'Faye Adapter got message from ' + message.username + ' saying '+ message.message
-        @receive new Robot.TextMessage message.username, message.message
+      chat_subscription = @client.subscribe "#{room}", (message) =>
+        console.log "Faye Adapter got message in #{room} from #{message.username} saying #{message.message}"
+        user = id: 3, name: message.username, room: room
+        @receive new Robot.TextMessage(user, message.message)
+      
+      chat_subscription.errback (error) =>
+        console.log "Error while subscribing to #{room} #{error.message}"
 
     # Share the options
     @options = options    
@@ -42,21 +47,20 @@ class Faye extends Adapter
   send: (user, strings...) =>
     for str in strings
       if user.room
-        console.log "#{user.room} #{str}"
-        # @client.publish('/chat/nicolas'
-      else
-        console.log "@#{user.name} #{str}"
-        @client.publish '/chat/nicolas',
+        console.log "sending #{str} in room #{user.room} "
+        @client.publish user.room,
           username:     @robot.name,
           message:      str
+      else
+        console.log "don't know how to send it"
 
   reply: (user, strings...) ->
     for str in strings
       @send user, "#{user.name}: #{str}"
 
   join: (channel) ->
-    console.log "### Faye Adapter #{@robot.name} has join channel /chat/#{channel}"
-    @client.publish "/chat/#{channel}",
+    console.log "### Faye Adapter #{@robot.name} has join channel #{channel}"
+    @client.publish "#{channel}",
       username:     @robot.name,
       message:      "#{@robot.name} has join"
 
