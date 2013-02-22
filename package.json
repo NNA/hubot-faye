@@ -1,5 +1,5 @@
 {
-  "name":        "hubot-faye",
+  "name":        "hubot-hutart",
   "version":     "0.0.2",
   "author":      "nna",
   "keywords":    "github hubot faye adapter",
@@ -15,8 +15,8 @@
     "url": "git://github.com/nna/hubot-faye.git"
   },
   "dependencies": {
-    "hubot": "2.0.4",
-    "faye":"0.6.7"
+    "faye":"0.8.8",
+    "validator": "0.4.x"
   },
   "devDependencies": {
     "coffee-script": "1.1.3"

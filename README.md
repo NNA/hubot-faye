@@ -29,6 +29,8 @@ You will need to set some environment variables to use this adapter.
     % heroku config:add HUBOT_FAYE_ROOMS="public"
 
     % heroku config:add HUBOT_FAYE_EXTENSIONS_DIR="faye_extensions"
+    
+    % heroku config:add HUBOT_FAYE_AUTH_TOKEN="faye_auth_token"
 
 ### Non-Heroku environment variables
 
@@ -47,6 +49,8 @@ You will need to set some environment variables to use this adapter.
     % export HUBOT_FAYE_ROOMS="public"
 
     % export HUBOT_FAYE_EXTENSIONS_DIR="faye_extensions"
+    
+    % export HUBOT_FAYE_AUTH_TOKEN="faye_auth_token"
 
 ## Contribute
 

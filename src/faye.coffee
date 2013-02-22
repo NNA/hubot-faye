@@ -1,68 +1,106 @@
-Robot = require("hubot").robot()
-Adapter = require('hubot').adapter()
+{Robot, Adapter, TextMessage, EnterMessage, LeaveMessage, Response} = require require.main.filename.replace(/hubot$/, ".." )
 
-faye = require 'faye'
-fs = require 'fs'
-path = require 'path'
+Check = require('validator').check
+Sanitize = require('validator').sanitize
 
-class Faye extends Adapter
+Faye = require 'faye'
+Fs = require 'fs'
+Path = require 'path'
+EventEmitter = require('events').EventEmitter
 
-  run: ->
-    # Client Options
-    options = 
-      server: process.env.HUBOT_FAYE_SERVER
-      port: process.env.HUBOT_FAYE_PORT || 80
-      path: process.env.HUBOT_FAYE_PATH || 'bayeux'
-      user: process.env.HUBOT_FAYE_USER || 'anonymous'
-      password: process.env.HUBOT_FAYE_PASSWORD || ''
-      avatar: process.env.HUBOT_FAYE_AVATAR || ''
-      rooms: process.env.HUBOT_FAYE_ROOMS?.split(',') ? ['/chat/test_room']
-      extensions_dir: process.env.HUBOT_FAYE_EXTENSIONS_DIR || 'src/adapters/faye_extensions'
-    
-    if not options.server
-      throw Error('You need to set HUBOT_FAYE_SERVER env vars for faye to work')
+class FayeAdapter extends Adapter
+  close: ->
+    console.log("$ adapter.close...")
 
-    # Connect to faye server
-    @client = new faye.Client options.server + ':' + options.port + '/' + options.path
+  topic: (command, strings...) ->
+    console.log("$ adapter.topic...")
 
-    # Load all faye extensions
-    for file in fs.readdirSync("#{options.extensions_dir}")
-      @client.addExtension require(path.resolve("#{options.extensions_dir}/#{file}"))
-
-    for room in options.rooms
-      console.log "Subscribing to room #{room}"
-
-      #subscribe to every rooms
-      chat_subscription = @client.subscribe "#{room}", (message) =>
-        console.log "Faye Adapter got message in #{room} from #{message.username} saying #{message.message}"
-        user = id: 3, name: message.username, room: room
-        @receive new Robot.TextMessage(user, message.message)
-      
-      chat_subscription.errback (error) =>
-        console.log "Error while subscribing to #{room} #{error.message}"
-
-    # Share the options
-    @options = options    
+  notice: (user, strings...) ->
+    console.log("$ adapter.notice...")
   
   send: (user, strings...) =>
+    console.log("$ adapter.send...")
     for str in strings
       if user.room
-        console.log "sending #{str} in room #{user.room} "
-        @client.publish user.room,
+        console.log "# sending #{str} to room #{user.room} "
+        @bot.publish user.room,
           username:     @robot.name,
-          message:      str
+          plain:        str,
+          content:      @bot.prepare_message @robot.name, str
       else
         console.log "don't know how to send it"
 
   reply: (user, strings...) ->
+    console.log("$ adapter.reply...")
     for str in strings
-      @send user, "#{user.name}: #{str}"
+      @send user, "@#{user.name}: #{str}"
 
   join: (channel) ->
-    console.log "### Faye Adapter #{@robot.name} has join channel #{channel}"
-    @client.publish "#{channel}",
+    console.log("$ adapter.notice...")
+    @bot.publish "#{channel}",
       username:     @robot.name,
-      message:      "#{@robot.name} has join"
+      plain:        "#{@robot.name} has join",
+      content:      @bot.prepare_message @robot.name, "#{@robot.name} has join"
+
+  run: ->
+    console.log("$ adapter.run...")
+    self = @
+
+    @options = 
+      server: process.env.HUBOT_FAYE_SERVER || 'http://localhost:3000'
+      port: process.env.HUBOT_FAYE_PORT || 80
+      path: process.env.HUBOT_FAYE_PATH || 'faye'
+      user: process.env.HUBOT_FAYE_USER || 'anonymous'
+      password: process.env.HUBOT_FAYE_PASSWORD || ''
+      avatar: process.env.HUBOT_FAYE_AVATAR || ''
+      rooms: process.env.HUBOT_FAYE_ROOMS?.split(',') ? ['/messages/new']
+      extensions_dir: process.env.HUBOT_FAYE_EXTENSIONS_DIR || "#{__dirname}/faye_extensions"
+
+    bot = new FayeClient(@options)
+    
+    for room in @options.rooms
+      console.log "# subscribing to room #{room}"
+      bot.subscribe room
+
+    bot.on "TextMessage", (user, message) =>
+      console.log("# on.TextMessage: #{user.name}: #{message}")
+      @robot.receive new TextMessage user, message, 'messageId'
+
+    self.emit 'connected'
+
+    @bot = bot
 
 exports.use = (robot) ->
-  new Faye robot
+  new FayeAdapter robot
+
+class FayeClient extends EventEmitter
+
+  constructor: (options) ->
+    @options = options
+    
+    if not options.server
+      throw Error('You need to set HUBOT_FAYE_SERVER env vars for faye to work')
+
+    @client = new Faye.Client options.server + ':' + options.port + '/' + options.path
+
+#    @client.addExtension require("#{__dirname}/faye_extensions/client_auth")
+    for file in Fs.readdirSync("#{options.extensions_dir}")
+      @client.addExtension require(path.resolve("#{options.extensions_dir}/#{file}"))
+
+  subscribe: (room)->
+    chat_subscription = @client.subscribe "#{room}", (message) =>
+      console.log "# received in [#{room}] #{message.username}: #{message.plain}"
+      user = id: '7', name: message.username, room: room
+      @emit "TextMessage", user, message.plain
+    
+    chat_subscription.errback (error) =>
+      console.log "# error while subscribing to #{room} #{error.message}"
+
+  publish: (channel, message) ->
+    @client.publish channel, message
+    console.log("# publish to #{channel}: #{JSON.stringify(message)}")
+
+  prepare_message: (username, message) ->
+    return Sanitize(message).entityEncode().replace(/\n/g, "<br>").replace(/\r/g, "<br>");
+
+
