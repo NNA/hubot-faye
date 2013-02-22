@@ -2,7 +2,6 @@
 
 Check = require('validator').check
 Sanitize = require('validator').sanitize
-Config = require("#{__dirname}/config.coffee")
 
 Faye = require 'faye'
 Fs = require 'fs'
@@ -48,13 +47,13 @@ class FayeAdapter extends Adapter
     self = @
 
     @options = 
-      server: process.env.HUBOT_FAYE_SERVER || Config.server
+      server: process.env.HUBOT_FAYE_SERVER || 'http://localhost:3000'
       port: process.env.HUBOT_FAYE_PORT || 80
       path: process.env.HUBOT_FAYE_PATH || 'faye'
       user: process.env.HUBOT_FAYE_USER || 'anonymous'
       password: process.env.HUBOT_FAYE_PASSWORD || ''
       avatar: process.env.HUBOT_FAYE_AVATAR || ''
-      rooms: process.env.HUBOT_FAYE_ROOMS?.split(',') ? Config.rooms
+      rooms: process.env.HUBOT_FAYE_ROOMS?.split(',') ? ['/messages/new']
       extensions_dir: process.env.HUBOT_FAYE_EXTENSIONS_DIR || "#{__dirname}/faye_extensions"
 
     bot = new FayeClient(@options)
@@ -83,7 +82,10 @@ class FayeClient extends EventEmitter
       throw Error('You need to set HUBOT_FAYE_SERVER env vars for faye to work')
 
     @client = new Faye.Client options.server + ':' + options.port + '/' + options.path
-    @client.addExtension require("./faye_extensions/client_auth")
+
+#    @client.addExtension require("#{__dirname}/faye_extensions/client_auth")
+    for file in Fs.readdirSync("#{options.extensions_dir}")
+      @client.addExtension require(path.resolve("#{options.extensions_dir}/#{file}"))
 
   subscribe: (room)->
     chat_subscription = @client.subscribe "#{room}", (message) =>

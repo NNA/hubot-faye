@@ -1,5 +1,3 @@
 node_modules
 npm-debug.log
-src/faye_extensions/client_auth.coffee
-config.coffee
 .DS_Store

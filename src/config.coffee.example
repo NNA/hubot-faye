@@ -1,4 +1,0 @@
-module.exports = {
-	server: 'http://[app-name].herokuapp.com',
-	rooms: ['[room-name]']
-}
