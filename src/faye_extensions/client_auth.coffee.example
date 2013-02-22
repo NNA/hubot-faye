@@ -1,0 +1,12 @@
+clientAuth = outgoing: (message, callback) ->
+  # Leave non-subscribe or chat messages alone
+  if (message.channel is not '/meta/subscribe' and !/chat/.test(message.channel))
+    return callback message
+
+  message.ext ?= {}
+  
+  message.ext.auth_token = "your_super_secret_authentication_key"
+
+  callback message
+
+module.exports = clientAuth
